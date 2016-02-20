@@ -371,6 +371,38 @@ module Node = struct
       loop [] n producers
     end
 
+  let mute n =
+    let rec loop next to_rem = function
+    | [] ->
+        begin match next with
+        | (to_rem, prods) :: next -> loop next to_rem prods
+        | [] -> ()
+        end
+    | n :: todo ->
+        rem_dep n to_rem;
+        if n.rank = min_rank || has_dep n
+        then loop next to_rem todo
+        else loop ((n, n.producers ()) :: next) to_rem todo
+    in
+    loop [] n (n.producers ())
+
+  let unmute ?(update = false) n =
+    let rec loop next to_add = function
+    | [] ->
+        begin match next with
+        | (to_add, prods) :: next -> loop next to_add prods
+        | [] -> ()
+        end
+    | n :: todo ->
+        if n.rank = min_rank || has_dep n
+        then loop next to_add todo
+        else loop ((n, n.producers ()) :: next) to_add todo;
+        add_dep n to_add;
+        if update then n.update Step.nil
+    in
+    loop [] n (n.producers ());
+    if update then n.update Step.nil
+
   let set_rank n r = n.rank <- r
   let rmin = create min_rank
   let rmax n n' = if n.rank > n'.rank then n else n'
@@ -466,6 +498,9 @@ module E = struct
   | Emut m -> let c' = m.enode.retain in (m.enode.retain <- c); (`R c')
 
   let stop ?strong = function Never -> () | Emut m -> Node.stop ?strong m.enode
+  let mute = function Never -> () | Emut m -> Node.mute m.enode
+  let unmute = function Never -> () | Emut m -> Node.unmute m.enode
+
   let equal e e' = match e, e' with
   | Never, Never -> true
   | Never, _ | _, Never -> false
@@ -985,6 +1020,10 @@ module S = struct
 
   let stop ?strong =
     function Const _ -> () | Smut m -> Node.stop ?strong m.snode
+  let mute =
+    function Const _ -> () | Smut m -> Node.mute m.snode
+  let unmute =
+    function Const _ -> () | Smut m -> Node.unmute ~update:true m.snode
 
   let equal ?(eq = ( = )) s s' = match s, s' with
   | Const v, Const v' -> eq v v'

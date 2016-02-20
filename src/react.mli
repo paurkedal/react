@@ -74,6 +74,9 @@ module E : sig
       {b Note.} If executed in an {{!steps}update step}
       the event may still occur in the step. *)
 
+  val mute : 'a event -> unit
+  val unmute : 'a event -> unit
+
   val equal : 'a event -> 'a event -> bool
   (** [equal e e'] is [true] iff [e] and [e'] are equal. If both events are
       different from {!never}, physical equality is used. *)
@@ -333,6 +336,9 @@ module S : sig
 
       {b Note.} If executed in an update step the signal may
       still update in the step. *)
+
+  val mute : 'a signal -> unit
+  val unmute : 'a signal -> unit
 
   val equal : ?eq:('a -> 'a -> bool) -> 'a signal -> 'a signal -> bool
   (** [equal s s'] is [true] iff [s] and [s'] are equal. If both
